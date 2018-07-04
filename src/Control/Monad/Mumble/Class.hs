@@ -10,7 +10,7 @@ module Control.Monad.Mumble.Class
   , mumbleReceivePacket, mumbleSendPacket, mumbleReceiveAny
   , mumbleReceiveEither
   , MonadMumblePlugin(..)
-  , pluginServerMessages, pluginSendPacket
+  , pluginServerMessages, pluginServerMessagesE, pluginSendPacket
   , allocateSendQueue
   ) where
 
@@ -76,8 +76,6 @@ class (MonadMumblePlugin (MonadMumblePluginT m), MonadThrow m, MonadResource m, 
   mumbleReceiveMany :: MumblePacket a => PacketTypeProxy a -> m [a]
   mumbleSend :: RawPacket -> m ()
 
---  mumbleStartPlugin :: String -> MonadMumblePluginT IO () -> m (Async ())
-
 
 filterMessages :: (MonadThrow m, MumblePacket a) =>
   PacketTypeProxy a -> ConduitT APacket a m ()
@@ -90,12 +88,34 @@ filterMessages p =
              Just p' -> yield p'
              Nothing -> throwM $ UnexpectedPacket t t'
 
+filterMessagesE :: (MonadThrow m, MumblePacket a, MumblePacket b) =>
+  PacketTypeProxy a -> PacketTypeProxy b -> ConduitT APacket (Either a b) m ()
+filterMessagesE a b =
+  let ta = proxyPacketType a
+      tb = proxyPacketType b
+  in awaitForever $ \p ->
+    let t' = p ^. packetTypeAny
+    in if t' == ta
+       then case preview (_APacket a) p of
+              Just p' -> yield (Left p')
+              Nothing -> throwM $ UnexpectedPacket ta t'
+       else if t' == tb
+            then case preview (_APacket b) p of
+                   Just p' -> yield (Right p')
+                   Nothing -> throwM $ UnexpectedPacket tb t'
+            else return ()
 
 pluginServerMessages :: (MumblePacket a, MonadMumblePlugin m) =>
   PacketTypeProxy a -> m (ConduitT () a m ())
 pluginServerMessages p = do
   ap' <- pluginAnyServerMessage
   return (ap' .| filterMessages p)
+
+pluginServerMessagesE :: (MumblePacket a, MumblePacket b, MonadMumblePlugin m) =>
+  PacketTypeProxy a -> PacketTypeProxy b -> m (ConduitT () (Either a b) m ())
+pluginServerMessagesE a b = do
+  ap' <- pluginAnyServerMessage
+  return (ap' .| filterMessagesE a b)
 
 
 mumbleReceivePacket :: (MumblePacket a, MonadMumble m) => PacketTypeProxy a -> m a

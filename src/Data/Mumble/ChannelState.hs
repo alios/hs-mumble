@@ -7,7 +7,7 @@
 module Data.Mumble.ChannelState
   ( ChannelId, HasChannelId(..), _ChannelId
   , ChannelRecord, HasChannelRecord, _ChannelRecord
-  , ChannelDB, updateChannelDB, updateChannelDBMany
+  , ChannelDB, updateChannelDB, updateChannelDBMany, deleteChannel
   ) where
 
 import           Control.Lens.At
@@ -50,8 +50,8 @@ data ChannelRecord = ChannelRecord
 makePrisms ''ChannelRecord
 makeClassy ''ChannelRecord
 
-
-
+deleteChannel :: ChannelId -> ChannelDB ->  ChannelDB
+deleteChannel = Map.delete
 
 emptyChannelRecord :: ChannelId -> ChannelRecord
 emptyChannelRecord cid =
@@ -99,7 +99,7 @@ updateLinks' Nothing Nothing (Just rl) r  =
 type ChannelDB = Map ChannelId ChannelRecord
 
 type ChannelDBChildIdx = Map ChannelId (Set ChannelId)
-type ChannelDBLinkedByIdx = Map ChannelId (Set ChannelId)
+--type ChannelDBLinkedByIdx = Map ChannelId (Set ChannelId)
 
 
 

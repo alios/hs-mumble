@@ -2,13 +2,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TemplateHaskell   #-}
-
+o
 module Data.Mumble.UserState
   ( UserDB
   , SessionId, _SessionId, HasSessionId(..)
   , UserId, _UserId, HasUserId(..)
   , UserRecord, HasUserRecord(..)
-  , updateUserDB, updateUserDBMany
+  , updateUserDB, updateUserDBMany, deleteUser
   )where
 
 import           Control.Lens.At
@@ -19,6 +19,7 @@ import           Crypto.Hash
 import           Data.ByteString            (ByteString)
 import qualified Data.ByteString.Lazy       as BL
 import           Data.Map                   (Map)
+import qualified Data.Map                   as Map
 import           Data.Mumble.ChannelState
 import           Data.Mumble.Helpers
 import           Data.MumbleProto.UserState
@@ -77,6 +78,9 @@ emptyUserRecord sid cid = UserRecord sid Nothing cid mempty
 
 type UserDB = Map SessionId UserRecord
 
+deleteUser :: SessionId -> UserDB ->  UserDB
+deleteUser = Map.delete
+
 
 
 updateRecord :: HasUserRecord r => UserState -> r -> r
@@ -113,16 +117,16 @@ validRecordDB db ur =
        Just _ -> Nothing
 
 
-
-
-
 updateUserDB :: ChannelDB -> UserDB -> UserState -> Either String UserDB
 updateUserDB dbc db s = do
   sid <- maybeE "UserState without session id" (_SessionId #) $ s ^. session
-  cid <- maybeE "UserState without channel id" (_ChannelId #) $ s ^. channel_id
-  let u' =
-        maybe (updateRecord s (emptyUserRecord sid cid)) (updateRecord s) $
-        db ^. at sid
+  let opInsert :: UserState -> Either String UserRecord
+      opInsert s = do
+        cid <- maybeE "UserState without channel id" (_ChannelId #) $ s ^. channel_id
+        pure $ updateRecord s (emptyUserRecord sid cid)
+      opUpdate :: UserState -> UserRecord -> Either String UserRecord
+      opUpdate s = pure . updateRecord s
+  u' <- maybe (opInsert s) (opUpdate s) $ db ^. at sid
   case validRecordDB dbc u' of
     Nothing  -> Right $ db & at sid .~  pure u'
     Just err -> Left err

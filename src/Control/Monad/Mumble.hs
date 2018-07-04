@@ -284,9 +284,6 @@ mumbleAuth auth = do
     $(logDebug) (mconcat ["got ", T.pack . show . length $ pqs
                          , " PermissionQueries from server."])
 
-    $(logDebug) "got PermissionQueries from server:"
-    $(logDebugSH) (length pqs)
-
     uss <- mumbleReceiveMany PacketUserState
     $(logDebug) (mconcat ["got ", T.pack . show . length $ uss
                          , " UserStates from server."])
@@ -334,8 +331,8 @@ startClient tlsCfg u p = do
       putTMVar vChannelDB pChannelDB
       putTMVar vUserDB pUserDB
 
-    pAnyMessage <- startPlugin (_PluginPrintAnyPackage # ())
-    pTextMessages <- startPlugin (_PluginPrintTextMessages # ())
+--    void $ startPlugin (_PluginPrintAnyPackage # ())
+--    void $ startPlugin (_PluginPrintTextMessages # ())
 
     forever $ do
       $(logDebug) "waiting for packet."

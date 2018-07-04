@@ -19,6 +19,7 @@ import           Control.Monad.Mumble.Plugins
 import           Control.Monad.Mumble.Plugins.ChannelDB
 import           Data.Mumble.Packet
 import           Data.Mumble.UserState
+import           Data.MumbleProto.UserRemove            as UR (session)
 import           Data.MumbleProto.UserState
 import qualified Data.Text                              as T
 
@@ -39,18 +40,26 @@ instance MumblePlugin PluginUserDB where
       updateUserDBMany cdb mempty $ us
 
   runPlugin (PluginUserDB _ pcdb, v) = do
-    src <- pluginServerMessages PacketUserState
+    src <- pluginServerMessagesE PacketUserState PacketUserRemove
     $(logInfo) "startup completed"
-    let pr = awaitForever $ \a -> do
+    let pr = awaitForever $ \p -> do
           db <- liftIO . atomically . takeTMVar $ v
           cdb <- getPluginExport pcdb
-          case updateUserDB cdb db a of
-            Left err -> do
-              $(logWarn) (mconcat ["unable to update userdb: ", T.pack err])
-              liftIO .atomically .putTMVar v $ db
-            Right db' -> do
-              $(logDebug) "updated user db"
-              liftIO .atomically .putTMVar v $ db'
+          case p of
+            -- upsert
+            Left a -> case updateUserDB cdb db a of
+              Left err -> do
+                $(logWarn) (mconcat ["unable to update userdb: ", T.pack err])
+                liftIO .atomically .putTMVar v $ db
+              Right db' -> do
+                $(logDebug) "updated user db"
+                liftIO .atomically .putTMVar v $ db'
+            -- remove
+            Right a -> do
+              let sid = _SessionId # (a ^. UR.session)
+              $(logDebug) (mconcat ["removing user ", T.pack . show $ sid])
+              let db' = deleteUser sid db
+              liftIO . atomically . putTMVar v $ db'
     runConduit $ src .| pr
 
 makePrisms 'PluginUserDB
