@@ -1,10 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import           Control.Monad.Mumble
 import           Data.Conduit.Network.TLS
 
-m :: IO ()
-m =
+main :: IO ()
+main =
   let u = "username"
       p = pure "password"
       tlsCfg = tlsClientConfig 64738 "mumble.server.org"
