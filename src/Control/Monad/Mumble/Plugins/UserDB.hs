@@ -20,7 +20,7 @@ import           Control.Monad.Mumble.Plugins.ChannelDB
 import           Data.Mumble.Packet
 import           Data.Mumble.UserState
 import           Data.MumbleProto.UserRemove            as UR (session)
-import           Data.MumbleProto.UserState
+import           Data.MumbleProto.UserState             as US
 import qualified Data.Text                              as T
 
 data PluginUserDB
@@ -52,14 +52,16 @@ instance MumblePlugin PluginUserDB where
                 $(logWarn) (mconcat ["unable to update userdb: ", T.pack err])
                 liftIO .atomically .putTMVar v $ db
               Right db' -> do
-                $(logDebug) "updated user db"
-                liftIO .atomically .putTMVar v $ db'
+                let sid = a ^. US.session
+                liftIO . atomically . putTMVar v $ db'
+                $(logInfo) (mconcat ["updated user ", T.pack . show $ sid])
+
             -- remove
             Right a -> do
               let sid = _SessionId # (a ^. UR.session)
-              $(logDebug) (mconcat ["removing user ", T.pack . show $ sid])
               let db' = deleteUser sid db
               liftIO . atomically . putTMVar v $ db'
+              $(logInfo) (mconcat ["removed user ", T.pack . show $ sid])
     runConduit $ src .| pr
 
 makePrisms 'PluginUserDB

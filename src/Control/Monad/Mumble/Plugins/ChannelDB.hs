@@ -50,15 +50,16 @@ instance MumblePlugin PluginChannelDB where
                 $(logWarn) (mconcat ["unable to update channeldb: ", T.pack err])
                 liftIO . atomically . putTMVar v $ db
               Right db' -> do
-                $(logDebug) "updated channel db"
+                let cid = a ^. CS.channel_id
                 liftIO . atomically . putTMVar v $ db'
+                $(logInfo) (mconcat ["updated channel ", T.pack . show $ cid])
 
             -- remove
             Right a -> do
               let cid = _ChannelId # (a ^. CR.channel_id)
-              $(logDebug) (mconcat ["removing channel ", T.pack . show $ cid])
               let db' = deleteChannel cid db
               liftIO . atomically . putTMVar v $ db'
+              $(logInfo) (mconcat ["removed channel ", T.pack . show $ cid])
 
     runConduit $ src .| pr
 

@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE TemplateHaskell   #-}
-o
+
 module Data.Mumble.UserState
   ( UserDB
   , SessionId, _SessionId, HasSessionId(..)
@@ -120,13 +120,11 @@ validRecordDB db ur =
 updateUserDB :: ChannelDB -> UserDB -> UserState -> Either String UserDB
 updateUserDB dbc db s = do
   sid <- maybeE "UserState without session id" (_SessionId #) $ s ^. session
-  let opInsert :: UserState -> Either String UserRecord
-      opInsert s = do
+  let opInsert = do
         cid <- maybeE "UserState without channel id" (_ChannelId #) $ s ^. channel_id
         pure $ updateRecord s (emptyUserRecord sid cid)
-      opUpdate :: UserState -> UserRecord -> Either String UserRecord
-      opUpdate s = pure . updateRecord s
-  u' <- maybe (opInsert s) (opUpdate s) $ db ^. at sid
+      opUpdate = pure . updateRecord s
+  u' <- maybe opInsert opUpdate $ db ^. at sid
   case validRecordDB dbc u' of
     Nothing  -> Right $ db & at sid .~  pure u'
     Just err -> Left err
