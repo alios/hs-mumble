@@ -334,10 +334,6 @@ startClient tlsCfg u p = do
       putTMVar vChannelDB pChannelDB
       putTMVar vUserDB pUserDB
 
-
-
-
-
     pAnyMessage <- startPlugin (_PluginPrintAnyPackage # ())
     pTextMessages <- startPlugin (_PluginPrintTextMessages # ())
 

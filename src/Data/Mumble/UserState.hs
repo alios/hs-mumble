@@ -1,6 +1,7 @@
-{-# LANGUAGE DeriveGeneric   #-}
-{-# LANGUAGE RankNTypes      #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Data.Mumble.UserState
   ( UserDB
@@ -102,10 +103,14 @@ validRecordDB :: ChannelDB -> UserRecord -> Maybe String
 validRecordDB db ur =
   let cid = ur ^. channelId
   in case db ^. at cid of
-       Nothing -> Just $ mconcat
-         ["unable to lookup ", show cid, " for channel of ", show $ ur ^. sessionId ]
+       Nothing ->
+         if (cid ^. _ChannelId)  /= (ur ^. sessionId . _SessionId)
+         then Just $ mconcat
+              [ "unable to lookup ", show cid
+              , " for channel of ", show $ ur ^. sessionId
+              ]
+         else Nothing
        Just _ -> Nothing
-
 
 
 
