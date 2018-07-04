@@ -1,0 +1,70 @@
+name:                hs-mumble
+version:             0.1.0.0
+github:              "alios/hs-mumble"
+license:             BSD3
+author:              "Markus Barenhoff"
+maintainer:          "mbarenh@alios.org"
+copyright:           "BSD3"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/alios/hs-mumble#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- containers
+- time
+- vector
+- bytestring
+- binary
+- text
+- lens
+- mtl
+- protocol-buffers
+- protocol-buffers-descriptor
+- tls
+- resourcet
+- conduit
+- conduit-extra
+- stm
+- stm-conduit
+- stm-chans
+- async
+- network-conduit-tls
+- cryptonite
+- monad-logger
+
+library:
+  source-dirs: src
+  ghc-options: -Wall
+
+executables:
+  hs-mumble-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hs-mumble
+
+tests:
+  hs-mumble-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - hs-mumble
