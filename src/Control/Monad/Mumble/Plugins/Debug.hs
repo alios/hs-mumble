@@ -76,31 +76,3 @@ instance MumblePlugin PluginEchoBot where
 
 
 makePrisms 'PluginEchoBot
-
-
-
-
-
-
---foo l a = (\a' -> (lengthOf foleded a', seqset a')) <$> a ^. l
-
-
-
-                         {-
-  foo a = ( a ^. actor
-        , firstOf traverse $ a ^. session
-        , firstOf traverse $a
-
-
-bar l a = a ^. l >>= firstOf traverse
-
-
-DM:
-got message from actor 2396  from session 2158
-
-CM:
-got message from actor 2396  in tree id 7
-
-
-
-        -}
