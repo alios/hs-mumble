@@ -164,16 +164,11 @@ instance (MonadThrow m, MonadUnliftIO m, MonadIO m) => MonadMumble (MumbleT m) w
   type MonadMumblePluginT (MumbleT m) = MumblePluginT m
 
   mumbleReceive = do
-    $(logDebug) "mumbleReceive called"
     mumbleWithSink await >>= maybe (throwM NoMoreData) pure
   mumbleSend a = do
-    $(logDebug) "mumbleSend called for:"
-    $(logDebugSH) a
     st <- asks _sendSocket
     lift . runConduit $ yield a .| st
   mumbleReceiveMany a = do
-    $(logDebug) "mumbleReceiveMany called for: "
-    $(logDebugSH) (proxyPacketType a)
     r <- mumbleWithSink (mumbleManyOfC (proxyPacketType a) .| CL.consume)
     case sequence $ packetFromRawE a <$> r of
       Left err -> throwM . DecodePacketFailed $ err
@@ -341,10 +336,9 @@ startClient tlsCfg u p = do
 --    void $ startPlugin (_PluginEchoBot # ())
 
     forever $ do
-      $(logDebug) "waiting for packet."
       a <- mumbleReceiveAny
       liftIO . atomically . writeTMChan (s ^. serverMessages) $ a
-      $(logDebugSH) (a ^. packetTypeAny)
+
 
 
 

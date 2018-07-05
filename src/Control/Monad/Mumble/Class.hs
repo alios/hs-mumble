@@ -1,8 +1,6 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
-{-# LANGUAGE DeriveGeneric           #-}
 {-# LANGUAGE FlexibleContexts        #-}
 {-# LANGUAGE OverloadedStrings       #-}
-{-# LANGUAGE TemplateHaskell         #-}
 {-# LANGUAGE TypeFamilies            #-}
 
 module Control.Monad.Mumble.Class
@@ -143,29 +141,20 @@ pluginServerMessagesE a b = do
 
 
 mumbleReceivePacket :: (MumblePacket a, MonadMumble m) => PacketTypeProxy a -> m a
-mumbleReceivePacket a = do
-  $(logDebug) "mumbleReceivePacket called for: "
-  $(logDebugSH) (proxyPacketType a)
+mumbleReceivePacket a =
   packetFromRawE a <$> mumbleReceive >>=
     either (throwM . DecodePacketFailed) pure
 
 
 
 mumbleSendPacket :: (MumblePacket a, MonadMumble m) => a -> m ()
-mumbleSendPacket a = do
-  $(logDebug) "mumbleSendPacket called for: "
-  $(logDebugSH) a
-  mumbleSend $ rawFromPacket a
+mumbleSendPacket = mumbleSend . rawFromPacket
 
 pluginSendPacket :: (MumblePacket a, MonadMumblePlugin m) => a -> m ()
-pluginSendPacket a = do
-  $(logDebug) "mumblePluginSendPacket called for: "
-  $(logDebugSH) a
-  pluginSend $ rawFromPacket a
+pluginSendPacket = pluginSend . rawFromPacket
 
 mumbleReceiveAny :: (MonadMumble m) => m APacket
 mumbleReceiveAny = do
-  $(logDebug) "mumbleReceiveAny called."
   f <- raw2apacket <$> mumbleReceive
   either (throwM . DecodePacketFailed) pure f
 
@@ -177,9 +166,6 @@ mumbleReceiveEither a b =
       b' = proxyPacketType b
   in do
     rp <- mumbleReceive
-    $(logDebug) "mumbleReceiveEither called for: "
-    $(logDebugSH) (a', b')
-
     let (c,_) = rp ^. _RawPacket
         onE = either (throwM . DecodePacketFailed) pure
         ea = Left <$> onE (packetFromRawE a rp)

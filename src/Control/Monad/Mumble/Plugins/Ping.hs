@@ -24,6 +24,7 @@ import qualified Data.Text                    as T
 import           Data.Typeable                (Typeable)
 import           Data.Vector                  (Vector)
 import qualified Data.Vector                  as V
+import           Data.Word
 import           GHC.Generics                 (Generic)
 import qualified Text.ProtocolBuffers.Basic   as PB
 
@@ -31,9 +32,11 @@ data PingData = PingData
   { _tcpPingTs   :: TMVar (Vector Float)
   , _tcpMean     :: TMVar Float
   , _tcpVariance :: TMVar Float
+  , _tcpPingsN   :: TMVar Word32
   , _udpPingTs   :: TMVar (Vector Float)
   , _udpMean     :: TMVar Float
   , _udpVariance :: TMVar Float
+  , _udpPingsN   :: TMVar Word32
   }
 makeLenses ''PingData
 
@@ -78,8 +81,8 @@ instance MumblePlugin PluginPingTCP where
 
   getPluginName = const "PluginPingTCP"
   getPluginInitalState _ = liftIO . atomically $ PingData
-    <$> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0
-    <*> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0
+    <$> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0 <*> newTMVar 0
+    <*> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0 <*> newTMVar 0
 
 
   getPluginExport st =
@@ -121,6 +124,13 @@ instance MumblePlugin PluginPingTCP where
           (um, uv) <- liftIO . atomically $
             (,) <$> readTMVar (pd ^. udpMean) <*> readTMVar (pd ^. udpVariance)
 
+          tn <- liftIO . atomically $ do
+            let v = pd ^. tcpPingsN
+            tn' <- takeTMVar v
+            putTMVar v (succ tn')
+            return tn'
+          un <- liftIO . atomically . readTMVar $ pd ^. udpPingsN
+
           -- TODO: ping values
           return $ Ping {
             _timestamp = pure dtw,
@@ -128,8 +138,8 @@ instance MumblePlugin PluginPingTCP where
             _late = Just 0, -- TODO
             _lost = Just 0, -- TODO
             _resync = Just 0, -- TODO
-            _udp_packets = Just 0, -- TODO
-            _tcp_packets = Nothing, -- TODO
+            _udp_packets = Just un,
+            _tcp_packets = Just tn,
             _udp_ping_avg = Just um,
             _udp_ping_var = Just uv,
             _tcp_ping_avg = Just tm,
