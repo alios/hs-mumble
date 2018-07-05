@@ -17,6 +17,7 @@ import           Crypto.Hash
 import           Data.Map.Lazy                 (Map)
 import qualified Data.Map.Lazy                 as Map
 import           Data.Mumble.Helpers
+import           Data.Mumble.Types
 import           Data.MumbleProto.ChannelState
 import           Data.Sequence                 (Seq)
 import           Data.Set                      (Set)
@@ -24,16 +25,8 @@ import qualified Data.Set                      as Set
 import           Data.Text                     (Text)
 import qualified Data.Text                     as T
 import           Data.Typeable                 (Typeable)
-import           Data.Word
 import           GHC.Generics                  (Generic)
 import qualified Text.ProtocolBuffers.Basic    as PB
-
-newtype ChannelId = ChannelId Word32
-  deriving (Typeable, Generic, Eq, Ord, Show)
-
-makePrisms ''ChannelId
-makeClassy ''ChannelId
-
 
 data ChannelRecord = ChannelRecord
   { _cChannelId       :: !ChannelId

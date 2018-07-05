@@ -22,26 +22,13 @@ import           Data.Map                   (Map)
 import qualified Data.Map                   as Map
 import           Data.Mumble.ChannelState
 import           Data.Mumble.Helpers
+import           Data.Mumble.Types
 import           Data.MumbleProto.UserState
 import           Data.Text                  (Text)
 import qualified Data.Text                  as T
 import           Data.Typeable              (Typeable)
-import           Data.Word
 import           GHC.Generics               (Generic)
 import qualified Text.ProtocolBuffers.Basic as PB
-
-newtype SessionId = SessionId Word32
-  deriving (Typeable, Generic, Eq, Ord, Show)
-
-makePrisms ''SessionId
-makeClassy ''SessionId
-
-
-newtype UserId = UserId Word32
-  deriving (Typeable, Generic, Eq, Ord, Show)
-
-makePrisms ''UserId
-makeClassy ''UserId
 
 data UserRecord = UserRecord
   { _uSessionId      :: ! SessionId

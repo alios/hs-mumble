@@ -64,8 +64,8 @@ instance MumblePlugin PluginPrintTextMessages where
                         a ^. actor
                   sl = case Set.toList . seqset $ a ^. session of
                          []  -> ""
-                         [s] -> mconcat [ " from session ", T.pack . show $ s, " "]
-                         ss -> mconcat [ " from sessions ", T.pack . show $ ss, " "]
+                         [s] -> mconcat [ " in session ", T.pack . show $ s, " "]
+                         ss -> mconcat [ " in sessions ", T.pack . show $ ss, " "]
                   ci = case Set.toList . seqset $ a ^. TextMessage.channel_id of
                          []  -> ""
                          [s] -> mconcat [ " in channel id ", T.pack . show $ s, " "]
