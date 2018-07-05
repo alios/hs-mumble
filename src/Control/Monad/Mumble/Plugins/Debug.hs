@@ -15,7 +15,8 @@ import           Control.Monad.Logger
 import           Control.Monad.Mumble.Class
 import           Control.Monad.Mumble.Plugins
 import qualified Data.Conduit.Combinators     as CC
-import           Data.Mumble.Packet
+
+import           Data.Mumble.TextMessages
 import qualified Data.Text                    as T
 
 data PluginPrintAnyPackage
@@ -70,8 +71,20 @@ instance MumblePlugin PluginEchoBot where
   getPluginInitalState = const (pure ())
   getPluginExport = const (pure ())
   runPlugin _ = do
-    src <- pluginServerMessages PacketTextMessage
+    src <- pluginServerTextMessages
     $(logInfo) "startup completed"
+    runConduit $ src .| CC.mapM_ pr
+      where pr (PrivateMessage t (Just a) _ f) = do
+              sid <- pluginSelfSession
+              let rpl = PrivateMessage t (Just sid) a $
+                    mconcat [ "got your message: ", f ]
+              pluginSendPacket $ fromMumbleTextMessage rpl
+              $(logDebug) $ mconcat ["echo to ", T.pack . show $ a, ": ", f]
+            pr _ = return ()
+
+
+
+
 
 
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Data.Mumble.TextMessages where
 
 import           Control.Lens.Fold
@@ -8,14 +10,15 @@ import           Data.MumbleProto.TextMessage
 import           Data.Text                    (Text)
 import qualified Data.Text                    as T
 import           Data.Time.Clock
+import           Data.Typeable                (Typeable)
+import           GHC.Generics                 (Generic)
 import qualified Text.ProtocolBuffers.Basic   as PB
-
 
 data MumbleTextMessage
   = TreeMessage UTCTime (Maybe ActorId) ChannelId Text
   | ChannelMessage UTCTime (Maybe ActorId) ChannelId Text
   | PrivateMessage UTCTime (Maybe ActorId) SessionId Text
-  deriving (Show, Eq)
+  deriving (Typeable, Generic, Show, Eq)
 
 mumbleTextMessageTS :: Lens' MumbleTextMessage UTCTime
 mumbleTextMessageTS = lens g s
@@ -58,3 +61,12 @@ toMumbleTextMessage t m =
        (_, Just c',_)   -> Right $ ChannelMessage t a c' msg
        (_, _, Just s')  -> Right $ PrivateMessage t a s' msg
        _ -> Left "found neither tree, channel or session in message"
+
+
+fromMumbleTextMessage :: MumbleTextMessage -> TextMessage
+fromMumbleTextMessage (TreeMessage _ a i f) =
+  TextMessage ((^. _SessionId) <$> a) mempty mempty (pure (i ^. _ChannelId)) (PB.uFromString . T.unpack $ f)
+fromMumbleTextMessage (ChannelMessage _ a i f) =
+  TextMessage ((^. _SessionId) <$> a) mempty (pure (i ^. _ChannelId)) mempty (PB.uFromString . T.unpack $ f)
+fromMumbleTextMessage (PrivateMessage _ a i f) =
+  TextMessage ((^. _SessionId) <$> a) (pure (i ^. _SessionId)) mempty mempty (PB.uFromString . T.unpack $ f)

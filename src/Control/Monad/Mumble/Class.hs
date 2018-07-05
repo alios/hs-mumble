@@ -31,6 +31,7 @@ import           Data.Mumble.ChannelState
 import           Data.Mumble.Helpers
 import           Data.Mumble.Packet
 import           Data.Mumble.TextMessages
+import           Data.Mumble.Types
 import           Data.MumbleProto.Ping
 import           Data.MumbleProto.Reject
 import           Data.MumbleProto.TextMessage
@@ -39,6 +40,7 @@ import           Data.Typeable                   (Typeable)
 
 data MumbleException
   = NoMoreData
+  | InvalidState String
   | DecodePacketFailed String
   | UnexpectedRawPacket PacketType PacketType RawPacket
   | UnexpectedPacket PacketType PacketType
@@ -51,6 +53,7 @@ data MumbleException
 
 instance Show MumbleException where
     show NoMoreData               = "no more packets from mumble socket"
+    show (InvalidState s)         = "application in invalid state: " ++ s
     show (DecodePacketFailed s)   = " unable to parse raw packet: " ++ s
     show (UnexpectedRawPacket a b rp) =
       let c = fst $ rp ^. _RawPacket
@@ -74,6 +77,7 @@ class (MonadIO m, MonadThrow m, MonadLogger m) => MonadMumblePlugin m where
   pluginGetChannelDB :: m ChannelDB
   pluginSend :: RawPacket -> m ()
   pluginElapsedTime :: m NominalDiffTime
+  pluginSelfSession :: m SessionId
 
 class (MonadMumblePlugin (MonadMumblePluginT m), MonadThrow m, MonadResource m, MonadLoggerIO m, MonadUnliftIO m) => MonadMumble m where
   type MonadMumblePluginT m :: * -> *

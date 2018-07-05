@@ -50,12 +50,13 @@ import           Data.Conduit.Network.TLS
 import           Data.Conduit.TMChan
 import           Data.Mumble.Helpers
 import           Data.Mumble.Packet
+import           Data.Mumble.Types
 import           Data.MumbleProto.Authenticate
 import           Data.MumbleProto.ChannelState
 import           Data.MumbleProto.CodecVersion
 import           Data.MumbleProto.CryptSetup
 import           Data.MumbleProto.PermissionQuery
-import           Data.MumbleProto.ServerSync
+import           Data.MumbleProto.ServerSync            as SS
 import           Data.MumbleProto.UserState
 import           Data.MumbleProto.Version
 import qualified Data.Text                              as T
@@ -208,6 +209,10 @@ instance (MonadIO m, MonadThrow m) => MonadMumblePlugin (MumblePluginT m) where
   pluginSend p = do
     s <- asks (^. sendToServer)
     liftIO . atomically . writeTBMQueue s $ p
+  pluginSelfSession = do
+    a <- asks (^. (serverSync . SS.session))
+    maybe (throwM $ InvalidState "could not find session id in auth data")
+      (pure . (_SessionId #)) a
 
 
 mumbleManyOfC :: (Monad m) =>
@@ -333,6 +338,7 @@ startClient tlsCfg u p = do
 
 --    void $ startPlugin (_PluginPrintAnyPackage # ())
 --    void $ startPlugin (_PluginPrintTextMessages # ())
+--    void $ startPlugin (_PluginEchoBot # ())
 
     forever $ do
       $(logDebug) "waiting for packet."
