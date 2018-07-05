@@ -5,22 +5,18 @@
 module Control.Monad.Mumble.Plugins.Debug
   ( PluginPrintAnyPackage, _PluginPrintAnyPackage
   , PluginPrintTextMessages, _PluginPrintTextMessages
+  , PluginEchoBot, _PluginEchoBot
   ) where
 
 
 import           Conduit
-import           Control.Lens.Operators
 import           Control.Lens.TH
 import           Control.Monad.Logger
 import           Control.Monad.Mumble.Class
 import           Control.Monad.Mumble.Plugins
 import qualified Data.Conduit.Combinators     as CC
-import           Data.Mumble.Helpers
 import           Data.Mumble.Packet
-import           Data.MumbleProto.TextMessage as TextMessage
-import qualified Data.Set                     as Set
 import qualified Data.Text                    as T
-import qualified Text.ProtocolBuffers.Basic   as PB
 
 data PluginPrintAnyPackage
 
@@ -54,26 +50,57 @@ instance MumblePlugin PluginPrintTextMessages where
   getPluginInitalState = const (pure ())
   getPluginExport = const (pure ())
   runPlugin _ = do
-    src <- pluginServerMessages PacketTextMessage
+    src <- pluginServerTextMessages
     $(logInfo) "startup completed"
     runConduit $ src .| CC.mapM_ pr
-      where pr :: MonadLogger m => TextMessage -> m ()
-            pr a =
-              let m = T.pack . PB.uToString $ a ^. message
-                  act = maybe "" (\s -> T.pack $ mconcat [ "from actor ", show s, " " ]) $
-                        a ^. actor
-                  sl = case Set.toList . seqset $ a ^. session of
-                         []  -> ""
-                         [s] -> mconcat [ " in session ", T.pack . show $ s, " "]
-                         ss -> mconcat [ " in sessions ", T.pack . show $ ss, " "]
-                  ci = case Set.toList . seqset $ a ^. TextMessage.channel_id of
-                         []  -> ""
-                         [s] -> mconcat [ " in channel id ", T.pack . show $ s, " "]
-                         ss -> mconcat [ " in channel ids ", T.pack . show $ ss, " "]
-                  ti = case Set.toList . seqset $ a ^. tree_id of
-                         []  -> ""
-                         [s] -> mconcat [ " in tree id ", T.pack . show $ s, " "]
-                         ss -> mconcat [ " in tree ids ", T.pack . show $ ss, " "]
-              in $(logInfo) (mconcat ["got message ", act, sl, ci, ti, ": ", m])
+      where pr a = $(logInfo) (mconcat ["got text message ", T.pack . show $ a])
 
 makePrisms 'PluginPrintTextMessages
+
+
+data PluginEchoBot
+
+instance MumblePlugin PluginEchoBot where
+  data MumblePluginConfig PluginEchoBot = PluginEchoBot
+
+  type MumblePluginState PluginEchoBot = ()
+  type MumblePluginExport PluginEchoBot = ()
+
+  getPluginName = const "PluginEchoBot"
+  getPluginInitalState = const (pure ())
+  getPluginExport = const (pure ())
+  runPlugin _ = do
+    src <- pluginServerMessages PacketTextMessage
+    $(logInfo) "startup completed"
+
+
+
+makePrisms 'PluginEchoBot
+
+
+
+
+
+
+--foo l a = (\a' -> (lengthOf foleded a', seqset a')) <$> a ^. l
+
+
+
+                         {-
+  foo a = ( a ^. actor
+        , firstOf traverse $ a ^. session
+        , firstOf traverse $a
+
+
+bar l a = a ^. l >>= firstOf traverse
+
+
+DM:
+got message from actor 2396  from session 2158
+
+CM:
+got message from actor 2396  in tree id 7
+
+
+
+        -}

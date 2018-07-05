@@ -10,7 +10,8 @@ module Control.Monad.Mumble.Class
   , mumbleReceivePacket, mumbleSendPacket, mumbleReceiveAny
   , mumbleReceiveEither
   , MonadMumblePlugin(..)
-  , pluginServerMessages, pluginServerMessagesE, pluginSendPacket
+  , pluginServerMessages, pluginServerMessagesE, pluginServerTextMessages
+  , pluginSendPacket
   , allocateSendQueue
   ) where
 
@@ -29,8 +30,10 @@ import           Data.Conduit.TQueue
 import           Data.Mumble.ChannelState
 import           Data.Mumble.Helpers
 import           Data.Mumble.Packet
+import           Data.Mumble.TextMessages
 import           Data.MumbleProto.Ping
 import           Data.MumbleProto.Reject
+import           Data.MumbleProto.TextMessage
 import           Data.Time.Clock
 import           Data.Typeable                   (Typeable)
 
@@ -43,6 +46,7 @@ data MumbleException
   | ChannelDBFail String
   | UserDBFail String
   | PongFailure Ping Ping
+  | TextMessageFailure TextMessage String
   deriving Typeable
 
 instance Show MumbleException where
@@ -61,6 +65,8 @@ instance Show MumbleException where
       mconcat ["error updating user db: ", err]
     show (PongFailure a b) =
       mconcat ["expected pong: " , show a, ", got: ", show b]
+    show (TextMessageFailure m e) =
+      mconcat ["unexpected TextMessage: '" , show e, "': ", show m]
 instance Exception MumbleException
 
 class (MonadIO m, MonadThrow m, MonadLogger m) => MonadMumblePlugin m where
@@ -99,17 +105,31 @@ filterMessagesE a b =
        then case preview (_APacket a) p of
               Just p' -> yield (Left p')
               Nothing -> throwM $ UnexpectedPacket ta t'
-       else if t' == tb
-            then case preview (_APacket b) p of
-                   Just p' -> yield (Right p')
-                   Nothing -> throwM $ UnexpectedPacket tb t'
-            else return ()
+       else when (t' == tb) $
+            case preview (_APacket b) p of
+              Just p' -> yield (Right p')
+              Nothing -> throwM $ UnexpectedPacket tb t'
+
+
+decodeTextMessage ::
+  (MonadIO m, MonadThrow m) => TextMessage -> m MumbleTextMessage
+decodeTextMessage m = do
+  t <- liftIO getCurrentTime
+  either (throwM . TextMessageFailure m) pure . toMumbleTextMessage t $ m
+
 
 pluginServerMessages :: (MumblePacket a, MonadMumblePlugin m) =>
   PacketTypeProxy a -> m (ConduitT () a m ())
 pluginServerMessages p = do
   ap' <- pluginAnyServerMessage
   return (ap' .| filterMessages p)
+
+pluginServerTextMessages :: (MonadMumblePlugin m) =>
+  m (ConduitT () MumbleTextMessage m ())
+pluginServerTextMessages = do
+  c <- pluginServerMessages PacketTextMessage
+  return $ c .| CC.mapM decodeTextMessage
+
 
 pluginServerMessagesE :: (MumblePacket a, MumblePacket b, MonadMumblePlugin m) =>
   PacketTypeProxy a -> PacketTypeProxy b -> m (ConduitT () (Either a b) m ())
@@ -124,6 +144,8 @@ mumbleReceivePacket a = do
   $(logDebugSH) (proxyPacketType a)
   packetFromRawE a <$> mumbleReceive >>=
     either (throwM . DecodePacketFailed) pure
+
+
 
 mumbleSendPacket :: (MumblePacket a, MonadMumble m) => a -> m ()
 mumbleSendPacket a = do

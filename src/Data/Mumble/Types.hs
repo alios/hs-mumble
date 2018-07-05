@@ -20,7 +20,6 @@ newtype ChannelId = ChannelId Word32
 makePrisms ''ChannelId
 makeClassy ''ChannelId
 
-
 newtype SessionId = SessionId Word32
   deriving (Typeable, Generic, Eq, Ord, Show)
 
