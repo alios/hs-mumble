@@ -74,17 +74,18 @@ instance MumblePlugin PluginPingTCP where
   data MumblePluginConfig PluginPingTCP = PluginPingTCP
     { pingTCPdelay :: Int
     , pingTCPHistory :: Int
+    , pingTCPdata :: Maybe PingData
     }
 
   type MumblePluginState PluginPingTCP = PingData
   type MumblePluginExport PluginPingTCP = PingExport
 
   getPluginName = const "PluginPingTCP"
-  getPluginInitalState _ = liftIO . atomically $ PingData
-    <$> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0 <*> newTMVar 0
-    <*> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0 <*> newTMVar 0
-
-
+  getPluginInitalState cfg =
+    let pd0 = liftIO . atomically $ PingData
+              <$> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0 <*> newTMVar 0
+              <*> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0 <*> newTMVar 0
+    in maybe pd0 pure . pingTCPdata $ cfg
   getPluginExport st =
     let pd = st ^. pluginInstanceState
     in liftIO . atomically $
@@ -148,3 +149,26 @@ instance MumblePlugin PluginPingTCP where
 
 
 makePrisms 'PluginPingTCP
+
+
+data PluginPingUDP
+
+instance MumblePlugin PluginPingUDP where
+  data MumblePluginConfig PluginPingUDP = PluginPingUDP
+    { pingUDPdelay :: Int
+    , pingUDPHistory :: Int
+    , pingUDPdata :: Maybe PingData
+    }
+
+  type MumblePluginState PluginPingUDP = PingData
+  type MumblePluginExport PluginPingUDP = (Bool, PingExport)
+
+  getPluginName = const "PluginPingUDP"
+  getPluginInitalState cfg =
+    let pd0 = liftIO . atomically $ PingData
+              <$> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0 <*> newTMVar 0
+              <*> newTMVar mempty <*> newTMVar 0 <*> newTMVar 0 <*> newTMVar 0
+    in maybe pd0 pure . pingUDPdata $ cfg
+
+
+makePrisms 'PluginPingUDP
