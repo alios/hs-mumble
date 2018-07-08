@@ -28,6 +28,7 @@ dependencies:
 - binary
 - text
 - lens
+- free
 - mtl
 - protocol-buffers
 - protocol-buffers-descriptor
